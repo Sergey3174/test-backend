@@ -1,66 +1,58 @@
-const yargs = require("yargs");
-const pkg = require("./package.json");
+const express = require("express");
+const chalk = require("chalk");
+const path = require("path");
 const {
   addNote,
-  printNotes,
-  deleteNote,
+  getNotes,
+  removeNote,
   editNote,
 } = require("./notes.controller");
 
-yargs.version(pkg.version);
+const port = 3000;
+const app = express();
 
-const id = {
-  type: "string",
-  describe: "Note id",
-  demandCommand: true,
-};
+app.set("view engine", "ejs");
+app.set("views", "pages");
 
-const title = {
-  type: "string",
-  describe: "Note title",
-  demandCommand: true,
-};
+app.use(express.json());
+app.use(express.static(path.resolve(__dirname, "public")));
+app.use(express.urlencoded({ extended: true }));
 
-yargs.command({
-  command: "add",
-  describe: "Add new note to list",
-  builder: {
-    title,
-  },
-  handler({ title }) {
-    addNote(title);
-  },
+app.get("/", async (req, res) => {
+  res.render("index", {
+    title: "Express app",
+    notes: await getNotes(),
+    created: false,
+  });
 });
 
-yargs.command({
-  command: "list",
-  describe: "Print all notes",
-  async handler() {
-    printNotes();
-  },
+app.post("/", async (req, res) => {
+  await addNote(req.body.title);
+  res.render("index", {
+    title: "Express app",
+    notes: await getNotes(),
+    created: true,
+  });
 });
 
-yargs.command({
-  command: "remove",
-  describe: "Remove note by id",
-  builder: {
-    id,
-  },
-  handler({ id }) {
-    deleteNote(id);
-  },
+app.delete("/:id", async (req, res) => {
+  await removeNote(req.params.id);
+  res.render("index", {
+    title: "Express app",
+    notes: await getNotes(),
+    created: false,
+  });
 });
 
-yargs.command({
-  command: "edit",
-  describe: "Edit note by id",
-  builder: {
-    title,
-    id,
-  },
-  handler({ title, id }) {
-    editNote(title, id);
-  },
+app.put("/:id", async (req, res) => {
+  await editNote(req.body.title, req.params.id);
+  res.render("index", {
+    title: "Express app",
+    notes: await getNotes(),
+    created: false,
+  });
 });
 
-yargs.parse();
+app.listen(port, () => {
+  console.log(chalk.green(`Server has been started ${port}`));
+});
